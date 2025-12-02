@@ -88,6 +88,35 @@ inline double euclidean_distance(
   return std::hypot(dx, dy);
 }
 
+inline double distance_to_path_segment(
+  const geometry_msgs::msg::Point & point,
+  const geometry_msgs::msg::Pose & start,
+  const geometry_msgs::msg::Pose & end)
+{
+  const auto & p = point;
+  const auto & a = start.position;
+  const auto & b = end.position;
+
+  const double dx_seg = b.x - a.x;
+  const double dy_seg = b.y - a.y;
+
+  const double seg_len_sq = (dx_seg * dx_seg) + (dy_seg * dy_seg);
+
+  if (seg_len_sq <= 1e-9) {
+    return euclidean_distance(point, a);
+  }
+
+  const double dot = ((p.x - a.x) * dx_seg) + ((p.y - a.y) * dy_seg);
+  const double t = std::clamp(dot / seg_len_sq, 0.0, 1.0);
+
+  const double proj_x = a.x + t * dx_seg;
+  const double proj_y = a.y + t * dy_seg;
+
+  const double dx_proj = p.x - proj_x;
+  const double dy_proj = p.y - proj_y;
+  return std::hypot(dx_proj, dy_proj);
+}
+
 /**
  * @brief Get the L2 distance between 2 geometry_msgs::PoseStamped
  * @param pos1 First pose
@@ -177,6 +206,24 @@ inline double calculate_path_length(const nav_msgs::msg::Path & path, size_t sta
     path_length += euclidean_distance(path.poses[idx].pose, path.poses[idx + 1].pose);
   }
   return path_length;
+}
+
+inline double cross_product_2d(
+  const geometry_msgs::msg::Point & point,
+  const geometry_msgs::msg::Pose & start,
+  const geometry_msgs::msg::Pose & end)
+{
+  const auto & p = point;
+  const auto & a = start.position;
+  const auto & b = end.position;
+
+  const double path_vec_x = b.x - a.x;
+  const double path_vec_y = b.y - a.y;
+
+  const double robot_vec_x = p.x - a.x;
+  const double robot_vec_y = p.y - a.y;
+
+  return (path_vec_x * robot_vec_y) - (path_vec_y * robot_vec_x);
 }
 
 }  // namespace geometry_utils
